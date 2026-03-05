@@ -24,23 +24,25 @@ jobs:
           chmod 600 ~/.config/dfx/identity/buhdda-node4/identity.pem
           dfx identity use buhdda-node4
 
-      - name: Verify identity and check balance
+      - name: Check ICP balance
         run: |
           export DFX_WARNING=-mainnet_plaintext_identity
-          echo "Deploying as principal:"
-          dfx identity get-principal
-          echo "ICP Balance:"
+          PRINCIPAL=$(dfx identity get-principal)
+          echo "Principal: $PRINCIPAL"
           dfx ledger balance --network ic
 
-      - name: Convert ICP to cycles
+      - name: Create cycles wallet from ICP
         run: |
           export DFX_WARNING=-mainnet_plaintext_identity
-          dfx cycles convert --amount=0.2 --network ic
-
-      - name: Check cycles balance
-        run: |
-          export DFX_WARNING=-mainnet_plaintext_identity
-          dfx cycles balance --network ic
+          PRINCIPAL=$(dfx identity get-principal)
+          dfx ledger create-canister $PRINCIPAL --amount 0.5 --network ic 2>&1 | tee /tmp/wallet_output.txt
+          WALLET_ID=$(grep -oP '(?<=Canister created with id: )[\w-]+' /tmp/wallet_output.txt || true)
+          echo "Wallet canister ID: $WALLET_ID"
+          if [ -n "$WALLET_ID" ]; then
+            dfx identity deploy-wallet $WALLET_ID --network ic
+          else
+            dfx identity get-wallet --network ic || true
+          fi
 
       - name: Deploy Node 4 canister to ICP mainnet
         run: |

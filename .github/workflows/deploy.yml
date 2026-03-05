@@ -24,21 +24,34 @@ jobs:
           chmod 600 ~/.config/dfx/identity/buhdda-node4/identity.pem
           dfx identity use buhdda-node4
           export DFX_WARNING=-mainnet_plaintext_identity
-          echo "Principal: $(dfx identity get-principal)"
+          PRINCIPAL=$(dfx identity get-principal)
+          echo "Principal: $PRINCIPAL"
           echo "ICP Balance: $(dfx ledger balance --network ic)"
+          echo "PRINCIPAL=$PRINCIPAL" >> $GITHUB_ENV
 
-      - name: Convert ICP to cycles
+      - name: Create cycles wallet from ICP
         run: |
           export DFX_WARNING=-mainnet_plaintext_identity
-          dfx cycles convert --amount 0.5 --network ic --no-wallet
-          dfx cycles balance --network ic --no-wallet
+          EXISTING_WALLET=$(dfx identity get-wallet --network ic 2>&1 || true)
+          echo "Existing wallet check: $EXISTING_WALLET"
+          if [[ "$EXISTING_WALLET" =~ ^[a-z0-9]+-[a-z0-9]+-[a-z0-9]+-[a-z0-9]+-[a-z0-9]+$ ]]; then
+            echo "Wallet already exists: $EXISTING_WALLET"
+            echo "WALLET_ID=$EXISTING_WALLET" >> $GITHUB_ENV
+          else
+            CREATE_OUTPUT=$(dfx ledger create-canister "$PRINCIPAL" --amount 0.5 --network ic 2>&1)
+            echo "$CREATE_OUTPUT"
+            WALLET_ID=$(echo "$CREATE_OUTPUT" | awk '/Canister created with id:/{print $NF}' | tr -d '"')
+            echo "Wallet ID: $WALLET_ID"
+            dfx identity deploy-wallet "$WALLET_ID" --network ic
+            echo "WALLET_ID=$WALLET_ID" >> $GITHUB_ENV
+          fi
 
-      - name: Deploy canister using cycles ledger
+      - name: Deploy Node 4 canister
         run: |
           export DFX_WARNING=-mainnet_plaintext_identity
-          dfx deploy node4_buhdda --network ic --no-wallet --yes
+          dfx deploy node4_buhdda --network ic --yes
 
       - name: Get canister ID
         run: |
           export DFX_WARNING=-mainnet_plaintext_identity
-          dfx canister id node4_buhdda --network ic --no-wallet
+          dfx canister id node4_buhdda --network ic

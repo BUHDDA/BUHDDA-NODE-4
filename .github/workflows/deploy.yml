@@ -1,0 +1,39 @@
+name: Deploy Node 4 BUHDDA Canister to ICP Mainnet
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install dfx
+        run: |
+          sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)" -- --yes
+          echo "$HOME/bin" >> $GITHUB_PATH
+
+      - name: Set up DFX identity from secret
+        run: |
+          mkdir -p ~/.config/dfx/identity/buhdda-node4
+          echo "${{ secrets.DFX_IDENTITY_PEM }}" > ~/.config/dfx/identity/buhdda-node4/identity.pem
+          chmod 600 ~/.config/dfx/identity/buhdda-node4/identity.pem
+          dfx identity use buhdda-node4
+
+      - name: Verify identity
+        run: |
+          echo "Deploying as principal:"
+          dfx identity get-principal
+
+      - name: Deploy Node 4 canister to ICP mainnet
+        run: |
+          dfx deploy node4_buhdda --network ic --yes
+
+      - name: Get canister ID
+        run: |
+          echo "Node 4 Canister ID:"
+          dfx canister id node4_buhdda --network ic

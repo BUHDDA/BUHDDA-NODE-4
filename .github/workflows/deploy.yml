@@ -14,8 +14,8 @@ jobs:
 
       - name: Install dfx
         run: |
-          sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)" -- --yes
-          echo "$HOME/bin" >> $GITHUB_PATH
+          DFXVM_INIT_YES=true sh -ci "$(curl -fsSL https://internetcomputer.org/install.sh)"
+          echo "$HOME/.local/share/dfx/bin" >> $GITHUB_PATH
 
       - name: Set up DFX identity from secret
         run: |

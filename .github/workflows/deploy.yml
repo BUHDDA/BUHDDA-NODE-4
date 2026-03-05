@@ -31,9 +31,10 @@ jobs:
 
       - name: Deploy Node 4 canister to ICP mainnet
         run: |
+          export DFX_WARNING=-mainnet_plaintext_identity
           dfx deploy node4_buhdda --network ic --yes
 
       - name: Get canister ID
         run: |
-          echo "Node 4 Canister ID:"
+          export DFX_WARNING=-mainnet_plaintext_identity
           dfx canister id node4_buhdda --network ic

@@ -24,10 +24,23 @@ jobs:
           chmod 600 ~/.config/dfx/identity/buhdda-node4/identity.pem
           dfx identity use buhdda-node4
 
-      - name: Verify identity
+      - name: Verify identity and check balance
         run: |
+          export DFX_WARNING=-mainnet_plaintext_identity
           echo "Deploying as principal:"
           dfx identity get-principal
+          echo "ICP Balance:"
+          dfx ledger balance --network ic
+
+      - name: Convert ICP to cycles
+        run: |
+          export DFX_WARNING=-mainnet_plaintext_identity
+          dfx cycles convert --amount=0.2 --network ic
+
+      - name: Check cycles balance
+        run: |
+          export DFX_WARNING=-mainnet_plaintext_identity
+          dfx cycles balance --network ic
 
       - name: Deploy Node 4 canister to ICP mainnet
         run: |

@@ -24,30 +24,34 @@ jobs:
           chmod 600 ~/.config/dfx/identity/buhdda-node4/identity.pem
           dfx identity use buhdda-node4
 
-      - name: Check ICP balance
+      - name: Check balances
         run: |
           export DFX_WARNING=-mainnet_plaintext_identity
-          PRINCIPAL=$(dfx identity get-principal)
-          echo "Principal: $PRINCIPAL"
+          dfx identity get-principal
           dfx ledger balance --network ic
+          dfx identity get-wallet --network ic 2>&1 || echo "No wallet yet"
 
-      - name: Create cycles wallet from ICP
+      - name: Bootstrap cycles wallet
         run: |
           export DFX_WARNING=-mainnet_plaintext_identity
           PRINCIPAL=$(dfx identity get-principal)
-          dfx ledger create-canister $PRINCIPAL --amount 0.5 --network ic 2>&1 | tee /tmp/wallet_output.txt
-          WALLET_ID=$(grep -oP '(?<=Canister created with id: )[\w-]+' /tmp/wallet_output.txt || true)
-          echo "Wallet canister ID: $WALLET_ID"
-          if [ -n "$WALLET_ID" ]; then
-            dfx identity deploy-wallet $WALLET_ID --network ic
+          EXISTING=$(dfx identity get-wallet --network ic 2>&1 || true)
+          if echo "$EXISTING" | grep -qE '^[a-z0-9]+-[a-z0-9]'; then
+            WALLET_ID=$(echo "$EXISTING" | tr -d '[:space:]')
+            echo "Using existing wallet: $WALLET_ID"
           else
-            dfx identity get-wallet --network ic || true
+            OUTPUT=$(dfx ledger create-canister "$PRINCIPAL" --amount 0.5 --network ic 2>&1)
+            echo "$OUTPUT"
+            WALLET_ID=$(echo "$OUTPUT" | grep -oE '[a-z0-9]+-[a-z0-9]+-[a-z0-9]+-[a-z0-9]+-[a-z0-9]+' | tail -1)
+            echo "New canister ID: $WALLET_ID"
+            dfx identity deploy-wallet "$WALLET_ID" --network ic
           fi
+          echo "WALLET_ID=$WALLET_ID" >> $GITHUB_ENV
 
       - name: Deploy Node 4 canister to ICP mainnet
         run: |
           export DFX_WARNING=-mainnet_plaintext_identity
-          dfx deploy node4_buhdda --network ic --yes
+          dfx deploy node4_buhdda --network ic --wallet "$WALLET_ID" --yes
 
       - name: Get canister ID
         run: |

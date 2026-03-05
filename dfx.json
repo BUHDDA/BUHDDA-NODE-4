@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "canisters": {
+    "node4_buhdda": {
+      "main": "src/node4_buhdda/main.mo",
+      "type": "motoko"
+    }
+  },
+  "defaults": { "build": { "packtool": "" } },
+  "networks": {
+    "ic": {
+      "providers": ["https://ic0.app"],
+      "type": "persistent"
+    }
+  }
+}
